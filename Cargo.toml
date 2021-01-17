@@ -1,10 +1,10 @@
 
 [workspace]
 members = [
-	"runtime/",
+	"runtime",
 	"pallets/parachain-info",
 	"primitives",
-	"node/",
+	"node",
 ]
 
 [profile.release]
