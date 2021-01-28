@@ -18,20 +18,12 @@ use cumulus_primitives::ParaId;
 use hex_literal::hex;
 use rococo_parachain_primitives::{AccountId, Signature};
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
-use sc_service::ChainType;
+use sc_service::{ChainType, Properties};
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use sc_telemetry::TelemetryEndpoints;
 
-/// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
-
-/// Helper function to generate a crypto pair from seed
-pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
-	TPublic::Pair::from_string(&format!("//{}", seed), None)
-		.expect("static values are valid; qed")
-		.public()
-}
 
 /// The extensions for the [`ChainSpec`].
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ChainSpecGroup, ChainSpecExtension)]
@@ -48,6 +40,17 @@ impl Extensions {
 	pub fn try_get(chain_spec: &dyn sc_service::ChainSpec) -> Option<&Self> {
 		sc_chain_spec::get_extension(chain_spec.extensions())
 	}
+}
+
+
+/// Specialized `ChainSpec` for the normal parachain runtime.
+pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
+
+/// Helper function to generate a crypto pair from seed
+pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
+	TPublic::Pair::from_string(&format!("//{}", seed), None)
+		.expect("static values are valid; qed")
+		.public()
 }
 
 type AccountPublic = <Signature as Verify>::Signer;
@@ -120,6 +123,35 @@ pub fn staging_test_net(id: ParaId) -> ChainSpec {
 		},
 	)
 }
+
+pub fn starks_pc1_testnet(id: ParaId) -> ChainSpec {
+	let mut properties = Properties::new();
+	properties.insert("tokenSymbol".into(), "STN".into());
+	properties.insert("tokenDecimals".into(), 18.into());
+	ChainSpec::from_genesis(
+		"Starks Network PC1",
+		"starks_network",
+		ChainType::Live,
+		move || {
+			testnet_genesis(
+				hex!["5ae0bef89390c69ddceef596adb034b6b0546f5a0f9d8cb042e9288bd9e45e54"].into(),
+				vec![
+					hex!["1020e6d91d63cce6f6d961b5ec76364fe5601dd132e06a0de4dad3298ad8565a"].into(),
+				],
+				id,
+			)
+		},
+		Vec::new(),
+		TelemetryEndpoints::new(vec![("wss://telemetry.polkadot.io/submit/".into(), 0)]).ok(),
+		Some("starks-pc1"),
+		Some(properties),
+		Extensions {
+			relay_chain: "westend-dev".into(),
+			para_id: id.into(),
+		},
+	)
+}
+
 
 fn testnet_genesis(
 	root_key: AccountId,
