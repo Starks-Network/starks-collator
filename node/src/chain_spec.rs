@@ -169,7 +169,7 @@ fn testnet_genesis(
 			balances: endowed_accounts
 				.iter()
 				.cloned()
-				.map(|k| (k, 1 << 60))
+				.map(|k| (k, 10_u128.pow(28)))
 				.collect(),
 		}),
 		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
