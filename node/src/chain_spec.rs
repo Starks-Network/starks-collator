@@ -158,7 +158,7 @@ fn testnet_genesis(
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
-	parachain_runtime::GenesisConfig {
+	parachain_runtime::GenesisConfig {bushi
 		frame_system: Some(parachain_runtime::SystemConfig {
 			code: parachain_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
