@@ -146,7 +146,7 @@ pub fn starks_pc1_testnet(id: ParaId) -> ChainSpec {
 		Some("starks-pc1"),
 		Some(properties),
 		Extensions {
-			relay_chain: "westend-dev".into(),
+			relay_chain: "rococo".into(),
 			para_id: id.into(),
 		},
 	)
@@ -159,20 +159,20 @@ fn testnet_genesis(
 	id: ParaId,
 ) -> parachain_runtime::GenesisConfig {
 	parachain_runtime::GenesisConfig {
-		frame_system: Some(parachain_runtime::SystemConfig {
+		frame_system: parachain_runtime::SystemConfig {
 			code: parachain_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(parachain_runtime::BalancesConfig {
+		},
+		pallet_balances: parachain_runtime::BalancesConfig {
 			balances: endowed_accounts
 				.iter()
 				.cloned()
 				.map(|k| (k, 10_u128.pow(28)))
 				.collect(),
-		}),
-		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
-		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
+		},
+		pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
+		parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
 	}
 }
