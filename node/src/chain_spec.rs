@@ -129,8 +129,8 @@ pub fn starks_pc1_testnet(id: ParaId) -> ChainSpec {
 	properties.insert("tokenSymbol".into(), "STN".into());
 	properties.insert("tokenDecimals".into(), 18.into());
 	ChainSpec::from_genesis(
-		"Starks Network PC1",
-		"starks_network",
+		"zCloak Network PC1",
+		"zcloak_network",
 		ChainType::Live,
 		move || {
 			testnet_genesis(
@@ -143,7 +143,7 @@ pub fn starks_pc1_testnet(id: ParaId) -> ChainSpec {
 		},
 		Vec::new(),
 		TelemetryEndpoints::new(vec![("wss://telemetry.polkadot.io/submit/".into(), 0)]).ok(),
-		Some("starks-pc1"),
+		Some("zcloak-pc1"),
 		Some(properties),
 		Extensions {
 			relay_chain: "rococo".into(),
