@@ -1,10 +1,11 @@
 
 [workspace]
 members = [
-	"runtime",
+	"rococo-runtime",
 	"pallets/parachain-info",
-	"primitives",
+	"pallets/ping",
 	"node",
+	"shell-runtime",
 ]
 
 [profile.release]
