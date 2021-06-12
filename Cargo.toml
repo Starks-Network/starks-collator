@@ -1,11 +1,15 @@
-
 [workspace]
 members = [
-	"runtime/",
+	"node",
 	"pallets/parachain-info",
-	"primitives",
-	"node/",
+	"pallets/ping",
+	"rococo-runtime",
+	"shell-runtime",
+	"statemine-runtime",
+	"statemint-common",
+	"statemint-runtime",
+	"westmint-runtime",
 ]
 
 [profile.release]
-panic = 'unwind'
+panic = "unwind"

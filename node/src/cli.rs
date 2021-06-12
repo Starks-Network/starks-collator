@@ -1,4 +1,4 @@
-// Copyright 2019 Parity Technologies (UK) Ltd.
+// Copyright 2019-2021 Parity Technologies (UK) Ltd.
 // This file is part of Cumulus.
 
 // Cumulus is free software: you can redistribute it and/or modify
@@ -14,9 +14,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::path::PathBuf;
-
+use crate::chain_spec;
 use sc_cli;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 /// Sub-commands supported by the collator.
@@ -46,10 +46,14 @@ pub enum Subcommand {
 	ImportBlocks(sc_cli::ImportBlocksCmd),
 
 	/// Remove the whole chain.
-	PurgeChain(sc_cli::PurgeChainCmd),
+	PurgeChain(cumulus_client_cli::PurgeChainCmd),
 
 	/// Revert the chain to a previous state.
 	Revert(sc_cli::RevertCmd),
+
+	/// The custom benchmark subcommmand benchmarking runtime pallets.
+	#[structopt(name = "benchmark", about = "Benchmark runtime pallets.")]
+	Benchmark(frame_benchmarking_cli::BenchmarkCmd),
 }
 
 /// Command for exporting the genesis state of the parachain
@@ -60,8 +64,10 @@ pub struct ExportGenesisStateCommand {
 	pub output: Option<PathBuf>,
 
 	/// Id of the parachain this state is for.
-	#[structopt(long, default_value = "100")]
-	pub parachain_id: u32,
+	///
+	/// Default: 100
+	#[structopt(long)]
+	pub parachain_id: Option<u32>,
 
 	/// Write output in binary. Default is to write in hex.
 	#[structopt(short, long)]
@@ -89,24 +95,6 @@ pub struct ExportGenesisWasmCommand {
 }
 
 #[derive(Debug, StructOpt)]
-pub struct RunCmd {
-	#[structopt(flatten)]
-	pub base: sc_cli::RunCmd,
-
-	/// Id of the parachain this collator collates for.
-	#[structopt(long)]
-	pub parachain_id: Option<u32>,
-}
-
-impl std::ops::Deref for RunCmd {
-	type Target = sc_cli::RunCmd;
-
-	fn deref(&self) -> &Self::Target {
-		&self.base
-	}
-}
-
-#[derive(Debug, StructOpt)]
 #[structopt(settings = &[
 	structopt::clap::AppSettings::GlobalVersion,
 	structopt::clap::AppSettings::ArgsNegateSubcommands,
@@ -117,13 +105,7 @@ pub struct Cli {
 	pub subcommand: Option<Subcommand>,
 
 	#[structopt(flatten)]
-	pub run: RunCmd,
-
-	/// Run node as collator.
-	///
-	/// Note that this is the same as running with `--validator`.
-	#[structopt(long, conflicts_with = "validator")]
-	pub collator: bool,
+	pub run: cumulus_client_cli::RunCmd,
 
 	/// Relaychain arguments
 	#[structopt(raw = true)]
@@ -143,12 +125,17 @@ pub struct RelayChainCli {
 }
 
 impl RelayChainCli {
-	/// Create a new instance of `Self`.
+	/// Parse the relay chain CLI parameters using the para chain `Configuration`.
 	pub fn new<'a>(
-		base_path: Option<PathBuf>,
-		chain_id: Option<String>,
+		para_config: &sc_service::Configuration,
 		relay_chain_args: impl Iterator<Item = &'a String>,
 	) -> Self {
+		let extension = chain_spec::Extensions::try_get(&*para_config.chain_spec);
+		let chain_id = extension.map(|e| e.relay_chain.clone());
+		let base_path = para_config
+			.base_path
+			.as_ref()
+			.map(|x| x.path().join("polkadot"));
 		Self {
 			base_path,
 			chain_id,
