@@ -37,14 +37,14 @@ pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", 
 pallet-aura = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "master" }
 
 # Cumulus dependencies
-cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-ping = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-pallet-aura-ext = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-pallet-dmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-pallet-xcmp-queue = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-pallet-xcm = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
+cumulus-ping = { git = "https://github.com/paritytech/cumulus", branch = "master" , default-features = false }
 
 # Polkadot dependencies
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
@@ -52,6 +52,11 @@ xcm = { git = "https://github.com/paritytech/polkadot", default-features = false
 xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
+
+# Orml dependencies
+orml-tokens = { git = "https://github.com/zCloak-Network/open-runtime-module-library", default-features = false, branch = 'master'}
+orml-traits = { git = "https://github.com/zCloak-Network/open-runtime-module-library", default-features = false, branch = 'master'}
+
 
 [dev-dependencies]
 hex-literal = "0.3.1"
@@ -100,4 +105,6 @@ std = [
 	"xcm-executor/std",
 	"pallet-aura/std",
 	"sp-consensus-aura/std",
+	"orml-tokens/std",
+	"orml-traits/std",
 ]

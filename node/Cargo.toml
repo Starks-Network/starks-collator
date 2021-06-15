@@ -66,15 +66,15 @@ substrate-prometheus-endpoint = { git = "https://github.com/paritytech/substrate
 jsonrpc-core = "15.1.0"
 
 # Cumulus dependencies
-cumulus-client-cli ={ git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-client-consensus-common = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-client-service = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-client-network = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
-cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/cumulus", default-features = false, branch = "master" }
+cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-client-consensus-aura = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
+cumulus-client-consensus-relay-chain = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
+cumulus-client-consensus-common = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
+cumulus-client-collator = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
+cumulus-client-service = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
+cumulus-client-network = { git = "https://github.com/paritytech/cumulus", branch = "master" }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
+cumulus-primitives-parachain-inherent = { git = "https://github.com/paritytech/cumulus", branch = "master"  }
 
 # Polkadot dependencies
 polkadot-primitives = { git = "https://github.com/paritytech/polkadot", branch = "master" }
