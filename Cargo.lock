@@ -5286,6 +5286,7 @@ dependencies = [
 name = "orml-xcm-support"
 version = "0.4.1-dev"
 dependencies = [
+ "cumulus-primitives-core 0.1.0 (git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.1)",
  "frame-support 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.1)",
  "frame-system 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.1)",
  "orml-traits",
@@ -5293,6 +5294,7 @@ dependencies = [
  "sp-runtime 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.1)",
  "sp-std 3.0.0 (git+https://github.com/paritytech/substrate?branch=polkadot-v0.9.1)",
  "xcm 0.9.1",
+ "xcm-builder 0.9.1",
  "xcm-executor 0.9.1",
 ]
 
