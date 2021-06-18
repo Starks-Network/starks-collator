@@ -71,6 +71,16 @@ xcm-builder = { git = "https://github.com/paritytech/polkadot", default-features
 xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
 
+#Orml dependencies
+orml-xcm-support = { path = "../zcloak-orml/xcm-support", default-features = false}
+orml-xtokens = {path = "../zcloak-orml/xtokens", default-features = false}
+orml-tokens = {path = "../zcloak-orml/tokens", default-features = false}
+orml-traits = {path = "../zcloak-orml/traits", default-features = false}
+
+#Acala primitives
+acala-primitives = { path = "../primitives", default-features = false}
+
+
 [dev-dependencies]
 hex-literal = "0.3.1"
 hex = "0.4.3"
@@ -146,4 +156,5 @@ std = [
 	"sp-consensus-aura/std",
 	"node-primitives/std",
 	"statemint-common/std",
+	"acala-primitives/std"
 ]
