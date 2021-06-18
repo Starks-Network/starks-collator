@@ -54,8 +54,8 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
 
 # Orml dependencies
-orml-tokens = { path = "../zcloak-orml/tokens", default-features = false}
-orml-traits = { path = "../zcloak-orml/traits", default-features = false}
+orml-tokens = { git = "https://github.com/jonathanxuu/open-runtime-module-library", default-features = false, branch = "master"}
+orml-traits = { git = "https://github.com/jonathanxuu/open-runtime-module-library", default-features = false, branch = "master"}
 
 
 [dev-dependencies]
@@ -105,6 +105,8 @@ std = [
 	"xcm-executor/std",
 	"pallet-aura/std",
 	"sp-consensus-aura/std",
+	"orml-tokens/std",
+	"orml-traits/std",
 	"orml-tokens/std",
 	"orml-traits/std",
 ]

@@ -72,11 +72,15 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", default-feature
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "master" }
 
 #Orml dependencies
-orml-xcm-support = { path = "../zcloak-orml/xcm-support", default-features = false}
-orml-xtokens = {path = "../zcloak-orml/xtokens", default-features = false}
-orml-tokens = {path = "../zcloak-orml/tokens", default-features = false}
-orml-traits = {path = "../zcloak-orml/traits", default-features = false}
+# orml-xcm-support = { path = "../zcloak-orml/xcm-support", default-features = false}
+# orml-xtokens = {path = "../zcloak-orml/xtokens", default-features = false}
+# orml-tokens = {path = "../zcloak-orml/tokens", default-features = false}
+# orml-traits = {path = "../zcloak-orml/traits", default-features = false}
 
+orml-xcm-support = { git  = "https://github.com/jonathanxuu/open-runtime-module-library", default-features = false, branch = "master" }
+orml-xtokens =  { git  = "https://github.com/jonathanxuu/open-runtime-module-library", default-features = false, branch = "master" }
+orml-tokens =  { git  = "https://github.com/jonathanxuu/open-runtime-module-library", default-features = false, branch = "master" }
+orml-traits =  { git  = "https://github.com/jonathanxuu/open-runtime-module-library", default-features = false, branch = "master" }
 #Acala primitives
 acala-primitives = { path = "../primitives", default-features = false}
 
@@ -156,5 +160,9 @@ std = [
 	"sp-consensus-aura/std",
 	"node-primitives/std",
 	"statemint-common/std",
-	"acala-primitives/std"
+	"acala-primitives/std",
+	"orml-xcm-support/std",
+	"orml-xtokens/std",
+	"orml-tokens/std",
+	"orml-traits/std",
 ]
