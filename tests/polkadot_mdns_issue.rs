@@ -1,4 +1,4 @@
-// Copyright 2020 Parity Technologies (UK) Ltd.
+// Copyright 2020-2021 Parity Technologies (UK) Ltd.
 // This file is part of Substrate.
 
 // Substrate is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@ fn interrupt_polkadot_mdns_issue_test() {
 
 	fn run_command_and_kill(signal: Signal) {
 		let _ = fs::remove_dir_all("interrupt_polkadot_mdns_issue_test");
-		let mut cmd = Command::new(cargo_bin("rococo-collator"))
+		let mut cmd = Command::new(cargo_bin("polkadot-collator"))
 			.args(&["-d", "interrupt_polkadot_mdns_issue_test", "--", "--dev"])
 			.spawn()
 			.unwrap();

@@ -1,4 +1,4 @@
-// Copyright 2019 Parity Technologies (UK) Ltd.
+// Copyright 2019-2021 Parity Technologies (UK) Ltd.
 // This file is part of Cumulus.
 
 // Cumulus is free software: you can redistribute it and/or modify
@@ -17,40 +17,120 @@
 use crate::{
 	chain_spec,
 	cli::{Cli, RelayChainCli, Subcommand},
+	service::{
+		StatemineRuntimeExecutor, StatemintRuntimeExecutor, WestmintRuntimeExecutor, new_partial,
+		RococoParachainRuntimeExecutor, ShellRuntimeExecutor, Block,
+	},
 };
 use codec::Encode;
-use cumulus_primitives::{genesis::generate_genesis_block, ParaId};
+use cumulus_client_service::genesis::generate_genesis_block;
+use cumulus_primitives_core::ParaId;
 use log::info;
-use parachain_runtime::Block;
 use polkadot_parachain::primitives::AccountIdConversion;
 use sc_cli::{
-	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, InitLoggerParams,
-	KeystoreParams, NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
+	ChainSpec, CliConfiguration, DefaultConfigurationValues, ImportParams, KeystoreParams,
+	NetworkParams, Result, RuntimeVersion, SharedParams, SubstrateCli,
 };
-use sc_service::{
-	config::{BasePath, PrometheusConfig},
-	PartialComponents,
-};
+use sc_service::config::{BasePath, PrometheusConfig};
 use sp_core::hexdisplay::HexDisplay;
 use sp_runtime::traits::Block as BlockT;
 use std::{io::Write, net::SocketAddr};
+
+// default to the Statemint/Statemine/Westmint id
+const DEFAULT_PARA_ID: u32 = 1000;
+
+trait IdentifyChain {
+	fn is_shell(&self) -> bool;
+	fn is_statemint(&self) -> bool;
+	fn is_statemine(&self) -> bool;
+	fn is_westmint(&self) -> bool;
+}
+
+impl IdentifyChain for dyn sc_service::ChainSpec {
+	fn is_shell(&self) -> bool {
+		self.id().starts_with("shell")
+	}
+	fn is_statemint(&self) -> bool {
+		self.id().starts_with("statemint")
+	}
+	fn is_statemine(&self) -> bool {
+		self.id().starts_with("statemine")
+	}
+	fn is_westmint(&self) -> bool {
+		self.id().starts_with("westmint")
+	}
+}
+
+impl<T: sc_service::ChainSpec + 'static> IdentifyChain for T {
+	fn is_shell(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_shell(self)
+	}
+	fn is_statemint(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_statemint(self)
+	}
+	fn is_statemine(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_statemine(self)
+	}
+	fn is_westmint(&self) -> bool {
+		<dyn sc_service::ChainSpec>::is_westmint(self)
+	}
+}
 
 fn load_spec(
 	id: &str,
 	para_id: ParaId,
 ) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-	match id {
-		"staging" => Ok(Box::new(chain_spec::staging_test_net(para_id))),
-		"" => Ok(Box::new(chain_spec::get_chain_spec(para_id))),
-		path => Ok(Box::new(chain_spec::ChainSpec::from_json_file(
-			path.into(),
-		)?)),
-	}
+	Ok(match id {
+		"staging" => Box::new(chain_spec::staging_test_net(para_id)),
+		"tick" => Box::new(chain_spec::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/tick.json")[..],
+		)?),
+		"trick" => Box::new(chain_spec::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/trick.json")[..],
+		)?),
+		"track" => Box::new(chain_spec::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/track.json")[..],
+		)?),
+		"shell" => Box::new(chain_spec::get_shell_chain_spec(para_id)),
+		"statemint-dev" => Box::new(chain_spec::statemint_development_config(para_id)),
+		"statemint-local" => Box::new(chain_spec::statemint_local_config(para_id)),
+		"statemine-dev" => Box::new(chain_spec::statemine_development_config(para_id)),
+		"statemine-local" => Box::new(chain_spec::statemine_local_config(para_id)),
+		// the chain spec as used for generating the upgrade genesis values
+		"statemine-genesis" => Box::new(chain_spec::statemine_config(para_id)),
+		// the shell-based chain spec as used for syncing
+		"statemine" => Box::new(chain_spec::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/statemine.json")[..],
+		)?),
+		"westmint-dev" => Box::new(chain_spec::westmint_development_config(para_id)),
+		"westmint-local" => Box::new(chain_spec::westmint_local_config(para_id)),
+		// the chain spec as used for generating the upgrade genesis values
+		"westmint-genesis" => Box::new(chain_spec::westmint_config(para_id)),
+		// the shell-based chain spec as used for syncing
+		"westmint" => Box::new(chain_spec::ChainSpec::from_json_bytes(
+			&include_bytes!("../res/westmint.json")[..],
+		)?),
+		"" => Box::new(chain_spec::get_chain_spec(para_id)),
+		path => {
+			let chain_spec = chain_spec::ChainSpec::from_json_file(path.into())?;
+			if chain_spec.is_statemint() {
+				Box::new(chain_spec::StatemintChainSpec::from_json_file(path.into())?)
+			} else if chain_spec.is_statemine() {
+				Box::new(chain_spec::StatemineChainSpec::from_json_file(path.into())?)
+			} else if chain_spec.is_westmint() {
+				Box::new(chain_spec::WestmintChainSpec::from_json_file(path.into())?)
+			} else if chain_spec.is_shell() {
+				Box::new(chain_spec::ShellChainSpec::from_json_file(path.into())?)
+			} else {
+				Box::new(chain_spec)
+			}
+		}
+	})
 }
 
 impl SubstrateCli for Cli {
 	fn impl_name() -> String {
-		"Cumulus Test Parachain Collator".into()
+		"Polkadot collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -59,7 +139,7 @@ impl SubstrateCli for Cli {
 
 	fn description() -> String {
 		format!(
-			"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
+			"Polkadot collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
 		{} [parachain-args] -- [relaychain-args]",
@@ -80,17 +160,27 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(100).into())
+		load_spec(id, self.run.parachain_id.unwrap_or(DEFAULT_PARA_ID).into())
 	}
 
-	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
-		&parachain_runtime::VERSION
+	fn native_runtime_version(chain_spec: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
+		if chain_spec.is_statemint() {
+			&statemint_runtime::VERSION
+		} else if chain_spec.is_statemine() {
+			&statemine_runtime::VERSION
+		} else if chain_spec.is_westmint() {
+			&westmint_runtime::VERSION
+		} else if chain_spec.is_shell() {
+			&shell_runtime::VERSION
+		} else {
+			&rococo_parachain_runtime::VERSION
+		}
 	}
 }
 
 impl SubstrateCli for RelayChainCli {
 	fn impl_name() -> String {
-		"Cumulus Test Parachain Collator".into()
+		"Polkadot collator".into()
 	}
 
 	fn impl_version() -> String {
@@ -98,11 +188,13 @@ impl SubstrateCli for RelayChainCli {
 	}
 
 	fn description() -> String {
-		"Cumulus test parachain collator\n\nThe command-line arguments provided first will be \
+		format!(
+			"Polkadot collator\n\nThe command-line arguments provided first will be \
 		passed to the parachain node, while the arguments provided after -- will be passed \
 		to the relaychain node.\n\n\
-		rococo-collator [parachain-args] -- [relaychain-args]"
-			.into()
+		{} [parachain-args] -- [relaychain-args]",
+			Self::executable_name()
+		)
 	}
 
 	fn author() -> String {
@@ -136,6 +228,62 @@ fn extract_genesis_wasm(chain_spec: &Box<dyn sc_service::ChainSpec>) -> Result<V
 		.ok_or_else(|| "Could not find wasm file in genesis state!".into())
 }
 
+macro_rules! construct_async_run {
+	(|$components:ident, $cli:ident, $cmd:ident, $config:ident| $( $code:tt )* ) => {{
+		let runner = $cli.create_runner($cmd)?;
+		if runner.config().chain_spec.is_westmint() {
+			runner.async_run(|$config| {
+				let $components = new_partial::<westmint_runtime::RuntimeApi, WestmintRuntimeExecutor, _>(
+					&$config,
+					crate::service::statemint_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		} else if runner.config().chain_spec.is_statemine() {
+			runner.async_run(|$config| {
+				let $components = new_partial::<statemine_runtime::RuntimeApi, StatemineRuntimeExecutor, _>(
+					&$config,
+					crate::service::statemint_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		} else if runner.config().chain_spec.is_statemint() {
+			runner.async_run(|$config| {
+				let $components = new_partial::<statemint_runtime::RuntimeApi, StatemintRuntimeExecutor, _>(
+					&$config,
+					crate::service::statemint_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		} else if runner.config().chain_spec.is_shell() {
+			runner.async_run(|$config| {
+				let $components = new_partial::<shell_runtime::RuntimeApi, ShellRuntimeExecutor, _>(
+					&$config,
+					crate::service::shell_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		} else {
+			runner.async_run(|$config| {
+				let $components = new_partial::<
+					rococo_parachain_runtime::RuntimeApi,
+					RococoParachainRuntimeExecutor,
+					_
+				>(
+					&$config,
+					crate::service::rococo_parachain_build_import_queue,
+				)?;
+				let task_manager = $components.task_manager;
+				{ $( $code )* }.map(|v| (v, task_manager))
+			})
+		}
+	}}
+}
+
 /// Parse command line arguments into service configuration.
 pub fn run() -> Result<()> {
 	let cli = Cli::from_args();
@@ -146,76 +294,57 @@ pub fn run() -> Result<()> {
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		}
 		Some(Subcommand::CheckBlock(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					import_queue,
-					..
-				} = crate::service::new_partial(&config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.import_queue))
 			})
 		}
 		Some(Subcommand::ExportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					..
-				} = crate::service::new_partial(&config)?;
-				Ok((cmd.run(client, config.database), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.database))
 			})
 		}
 		Some(Subcommand::ExportState(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					..
-				} = crate::service::new_partial(&config)?;
-				Ok((cmd.run(client, config.chain_spec), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, config.chain_spec))
 			})
 		}
 		Some(Subcommand::ImportBlocks(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					import_queue,
-					..
-				} = crate::service::new_partial(&config)?;
-				Ok((cmd.run(client, import_queue), task_manager))
+			construct_async_run!(|components, cli, cmd, config| {
+				Ok(cmd.run(components.client, components.import_queue))
 			})
 		}
 		Some(Subcommand::PurgeChain(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
-			runner.sync_run(|config| cmd.run(config.database))
-		}
-		Some(Subcommand::Revert(cmd)) => {
-			let runner = cli.create_runner(cmd)?;
-			runner.async_run(|config| {
-				let PartialComponents {
-					client,
-					task_manager,
-					backend,
-					..
-				} = crate::service::new_partial(&config)?;
-				Ok((cmd.run(client, backend), task_manager))
+
+			runner.sync_run(|config| {
+				let polkadot_cli = RelayChainCli::new(
+					&config,
+					[RelayChainCli::executable_name().to_string()]
+						.iter()
+						.chain(cli.relaychain_args.iter()),
+				);
+
+				let polkadot_config = SubstrateCli::create_configuration(
+					&polkadot_cli,
+					&polkadot_cli,
+					config.task_executor.clone(),
+				)
+				.map_err(|err| format!("Relay chain argument error: {}", err))?;
+
+				cmd.run(config, polkadot_config)
 			})
 		}
+		Some(Subcommand::Revert(cmd)) => construct_async_run!(|components, cli, cmd, config| {
+			Ok(cmd.run(components.client, components.backend))
+		}),
 		Some(Subcommand::ExportGenesisState(params)) => {
-			sc_cli::init_logger(InitLoggerParams {
-				tracing_receiver: sc_tracing::TracingReceiver::Log,
-				..Default::default()
-			})?;
+			let mut builder = sc_cli::LoggerBuilder::new("");
+			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
+			let _ = builder.init();
 
-			let block: Block = generate_genesis_block(&load_spec(
+			let block: crate::service::Block = generate_genesis_block(&load_spec(
 				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.into(),
+				params.parachain_id.unwrap_or(DEFAULT_PARA_ID).into(),
 			)?)?;
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
@@ -233,10 +362,9 @@ pub fn run() -> Result<()> {
 			Ok(())
 		}
 		Some(Subcommand::ExportGenesisWasm(params)) => {
-			sc_cli::init_logger(InitLoggerParams {
-				tracing_receiver: sc_tracing::TracingReceiver::Log,
-				..Default::default()
-			})?;
+			let mut builder = sc_cli::LoggerBuilder::new("");
+			builder.with_profiling(sc_tracing::TracingReceiver::Log, "");
+			let _ = builder.init();
 
 			let raw_wasm_blob =
 				extract_genesis_wasm(&cli.load_spec(&params.chain.clone().unwrap_or_default())?)?;
@@ -254,31 +382,44 @@ pub fn run() -> Result<()> {
 
 			Ok(())
 		}
+		Some(Subcommand::Benchmark(cmd)) => {
+			if cfg!(feature = "runtime-benchmarks") {
+				let runner = cli.create_runner(cmd)?;
+				if runner.config().chain_spec.is_statemine() {
+					runner.sync_run(|config| cmd.run::<Block, StatemineRuntimeExecutor>(config))
+				} else if runner.config().chain_spec.is_westmint() {
+					runner.sync_run(|config| cmd.run::<Block, WestmintRuntimeExecutor>(config))
+				} else if runner.config().chain_spec.is_statemint() {
+					runner.sync_run(|config| cmd.run::<Block, StatemintRuntimeExecutor>(config))
+				} else {
+					Err("Chain doesn't support benchmarking".into())
+				}
+			} else {
+				Err("Benchmarking wasn't enabled when building the node. \
+				You can enable it with `--features runtime-benchmarks`."
+					.into())
+			}
+		}
 		None => {
-			let runner = cli.create_runner(&*cli.run)?;
+			let runner = cli.create_runner(&cli.run.normalize())?;
 
 			runner.run_node_until_exit(|config| async move {
-				// TODO
-				let key = sp_core::Pair::generate().0;
-
-				let extension = chain_spec::Extensions::try_get(&*config.chain_spec);
-				let relay_chain_id = extension.map(|e| e.relay_chain.clone());
-				let para_id = extension.map(|e| e.para_id);
+				let para_id =
+					chain_spec::Extensions::try_get(&*config.chain_spec).map(|e| e.para_id);
 
 				let polkadot_cli = RelayChainCli::new(
-					config.base_path.as_ref().map(|x| x.path().join("polkadot")),
-					relay_chain_id,
+					&config,
 					[RelayChainCli::executable_name().to_string()]
 						.iter()
 						.chain(cli.relaychain_args.iter()),
 				);
 
-				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(100));
+				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(DEFAULT_PARA_ID));
 
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);
 
-				let block: Block =
+				let block: crate::service::Block =
 					generate_genesis_block(&config.chain_spec).map_err(|e| format!("{:?}", e))?;
 				let genesis_state = format!("0x{:?}", HexDisplay::from(&block.header().encode()));
 
@@ -286,16 +427,57 @@ pub fn run() -> Result<()> {
 				let polkadot_config =
 					SubstrateCli::create_configuration(&polkadot_cli, &polkadot_cli, task_executor)
 						.map_err(|err| format!("Relay chain argument error: {}", err))?;
-				let collator = cli.run.base.validator || cli.collator;
 
 				info!("Parachain id: {:?}", id);
 				info!("Parachain Account: {}", parachain_account);
 				info!("Parachain genesis state: {}", genesis_state);
-				info!("Is collating: {}", if collator { "yes" } else { "no" });
+				info!(
+					"Is collating: {}",
+					if config.role.is_authority() {
+						"yes"
+					} else {
+						"no"
+					}
+				);
 
-				crate::service::start_node(config, key, polkadot_config, id, collator)
-					.await
-					.map(|r| r.0)
+				if config.chain_spec.is_statemint() {
+					crate::service::start_statemint_node::<statemint_runtime::RuntimeApi, StatemintRuntimeExecutor>(
+						config,
+						polkadot_config,
+						id,
+					)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				} else if config.chain_spec.is_statemine() {
+					crate::service::start_statemint_node::<statemine_runtime::RuntimeApi, StatemineRuntimeExecutor>(
+						config,
+						polkadot_config,
+						id,
+					)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				} else if config.chain_spec.is_westmint() {
+					crate::service::start_statemint_node::<westmint_runtime::RuntimeApi, WestmintRuntimeExecutor>(
+						config,
+						polkadot_config,
+						id,
+					)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				} else if config.chain_spec.is_shell() {
+					crate::service::start_shell_node(config, polkadot_config, id)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				} else {
+					crate::service::start_rococo_parachain_node(config, polkadot_config, id)
+						.await
+						.map(|r| r.0)
+						.map_err(Into::into)
+				}
 			})
 		}
 	}
@@ -419,5 +601,12 @@ impl CliConfiguration<Self> for RelayChainCli {
 
 	fn announce_block(&self) -> Result<bool> {
 		self.base.base.announce_block()
+	}
+
+	fn telemetry_endpoints(
+		&self,
+		chain_spec: &Box<dyn ChainSpec>,
+	) -> Result<Option<sc_telemetry::TelemetryEndpoints>> {
+		self.base.base.telemetry_endpoints(chain_spec)
 	}
 }
