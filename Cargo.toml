@@ -2,10 +2,16 @@
 [workspace]
 members = [
 	"rococo-runtime",
-	"pallets/parachain-info",
-	"pallets/ping",
+	"pallets/*",
 	"node",
 	"shell-runtime",
+	"statemine-runtime",
+	"statemint-common",
+	"statemint-runtime",
+	"westmint-runtime",
+	"primitives",
+	"primitives/starks",
+
 ]
 
 [profile.release]
